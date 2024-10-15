@@ -28,6 +28,7 @@ def download_match(url:str, out_path:str):
 def main():
     while True:
         ids = get_ids()
+        #delete duplicates
         for id in ids:
             info = get_match_info(id)
             download_match(info['replay_url'], './output_folder/')
