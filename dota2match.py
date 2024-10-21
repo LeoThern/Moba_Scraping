@@ -4,14 +4,12 @@ from datetime import datetime
 @dataclass
 class Dota2Match:
     """Keep info about a specific Dota2 Match"""
-    id: str
+    id: int
     start_time: int = -1
     replay_url: str = ''
 
-    def __eq__(self, other):
-        if self.id == other.id:
-            return True
-        return False
+    def __hash__(self) -> int:
+        return hash(self.id)
 
     def is_older_than_a_week(self):
         assert self.start_time > 0, "Match start_time is missing"
