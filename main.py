@@ -7,7 +7,7 @@ import os
 
 from dota2match import Dota2Match
 from opendota_client import OpendotaClient
-from opendota_client import IncompleteDataException
+from opendota_client import MatchNotParsedException
 
 OUTPUT_FOLDER = './output_folder/'
 
@@ -51,8 +51,8 @@ def main():
             print(i)
             try:
                 full_info = od_client.fill_match_info(match)
-            except IncompleteDataException:
-                print(f"OpenDota provides no replay_url for {match.id}")
+            except MatchNotParsedException:
+                print(f"OpenDota currently provides no replay_url for {match.id}, parse requested")
                 continue
             if match.is_older_than_a_week():
                 print(f"Match {match.id} is older than a week, replay not available anymore")
