@@ -15,6 +15,9 @@ class OpendotaClient:
     def get_json_request_with_retry(self, url, counter=0) -> dict:
         try:
             response = requests.get(url, timeout=self.req_timeout)
+            if int(response.headers["X-Rate-Limit-Remaining-Day"]) <= 10:
+                print('Daily rate limit exhausted!')
+                exit()
             if response.status_code != 200:
                 #free uses expired?
                 print(response, response.text)
