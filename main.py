@@ -39,7 +39,7 @@ def download_match(url:str, out_path:str) -> None:
 def download_match_with_progress_bar(url:str, out_path:str) -> None:
     out_file = os.path.join(out_path, url.split('/')[-1])
     #TODO catch ratelimiting and use proxy accordingly
-    with requests.get(url, stream=True, allow_redirects=True) as r:
+    with requests.get(url, stream=True, allow_redirects=True, timeout=5) as r:
         r.raise_for_status()
 
         with open(out_file, 'wb') as f:
@@ -88,10 +88,14 @@ def main():
             folder_path = os.path.join(OUTPUT_FOLDER, date_folder)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
-            download_match_with_progress_bar(match.replay_url, folder_path)
+            try:
+                download_match_with_progress_bar(match.replay_url, folder_path)
+            except requests.exceptions.RequestException as e:
+                print(e)
+                continue
             with open(os.path.join(folder_path, f"{match.id}.json"), 'w') as out_file:
                 json.dump(full_info, out_file, indent=4)
-
+        exit()
         time.sleep(60*60)
 
 if __name__ == '__main__':
