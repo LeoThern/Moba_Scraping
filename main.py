@@ -2,6 +2,7 @@ import datetime
 import requests
 import shutil
 import queue
+import tqdm
 import json
 import time
 import os
@@ -26,12 +27,27 @@ def get_local_ids_last_week() -> set:
             ids.extend([int(file.split('.')[0]) for file in os.listdir(folder) if '.json' in file])
     return set(ids)
 
-def download_match(url:str, out_path:str):
+def download_match(url:str, out_path:str) -> None:
     out_file = os.path.join(out_path, url.split('/')[-1])
     #TODO catch ratelimiting and use proxy accordingly
     with requests.get(url, stream=True, allow_redirects=True) as r:
-        with open(file=out_file, mode='wb') as f:
-            shutil.copyfileobj(r.raw, f)
+        r.raise_for_status()
+        with open(out_file, 'wb') as f:
+            for data in r.iter_content(chunk_size=4096):
+                f.write(data)
+
+def download_match_with_progress_bar(url:str, out_path:str) -> None:
+    out_file = os.path.join(out_path, url.split('/')[-1])
+    #TODO catch ratelimiting and use proxy accordingly
+    with requests.get(url, stream=True, allow_redirects=True) as r:
+        r.raise_for_status()
+
+        with open(out_file, 'wb') as f:
+            total_size = int(r.headers.get('content-length', 0))
+            with tqdm.tqdm(total=total_size, unit='B', unit_scale=True, unit_divisor=1024) as pbar:
+                for data in r.iter_content(chunk_size=4096):
+                    f.write(data)
+                    pbar.update(len(data))
 
 
 def main():
@@ -66,16 +82,15 @@ def main():
                 print(f"Match {match.id} is older than a week, replay not available anymore")
                 continue
 
-            print(f"Starting download for {match.id} ...")
+            print(f"Starting download for {match.id} ({match_queue.qsize()} matches left)")
             date = datetime.datetime.fromtimestamp(match.start_time)
             date_folder = date.strftime("%d_%m_%Y/")
             folder_path = os.path.join(OUTPUT_FOLDER, date_folder)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
-            download_match(match.replay_url, folder_path)
+            download_match_with_progress_bar(match.replay_url, folder_path)
             with open(os.path.join(folder_path, f"{match.id}.json"), 'w') as out_file:
                 json.dump(full_info, out_file, indent=4)
-            print(f"Successfully downloaded {match.id}")
 
         time.sleep(60*60)
 
