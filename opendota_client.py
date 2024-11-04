@@ -10,7 +10,8 @@ class MatchNotParsedException(Exception):
 
 class OpendotaClient:
     def __init__(self, timeout=5, proxies=[]):
-        self.req_timeout = timeout #python/urllib requests sometimes load infinitely without timeout, after latest update??
+        requests.packages.urllib3.util.connection.HAS_IPV6 = False #opendota needs ipv4, times out for ipv6
+        self.req_timeout = timeout
         self.proxies = proxies
 
     def get_json_request_with_retry(self, url, counter=0) -> dict:
