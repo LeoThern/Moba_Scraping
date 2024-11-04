@@ -1,5 +1,6 @@
 import requests
 import time
+import datetime
 from itertools import chain
 
 from dota2match import Dota2Match
@@ -15,6 +16,17 @@ class OpendotaClient:
     def get_json_request_with_retry(self, url, counter=0) -> dict:
         try:
             response = requests.get(url, timeout=self.req_timeout)
+        except requests.exceptions.Timeout or requests.exceptions.ConnectionError:
+            time.sleep(5)
+            if counter > 2:
+                print('Internet connection seems to be lost, press ENTER to retry')
+                input()
+            return self.get_json_request_with_retry(url, counter + 1)
+        else:
+            if int(response.headers["X-Rate-Limit-Remaining-Minute"]) <= 1:
+                current_second = datetime.datetime.now().second
+                remaining_seconds = 60 - current_second
+                time.sleep(remaining_seconds)
             if int(response.headers["X-Rate-Limit-Remaining-Day"]) <= 10:
                 print('Daily rate limit exhausted!')
                 exit()
@@ -23,11 +35,6 @@ class OpendotaClient:
                 print(response, response.text)
                 input()
             return response.json()
-        except requests.exceptions.Timeout:
-            if counter > 2:
-                print('Internet connection seems to be lost, press ENTER to retry')
-                input()
-            return self.get_json_request_with_retry(url, counter + 1)
 
     def get_pro_matches(self) -> list[Dota2Match]:
         response = self.get_json_request_with_retry('https://api.opendota.com/api/proMatches')
@@ -59,7 +66,7 @@ class OpendotaClient:
     def request_parse(self, match_id:int) -> None:
         try:
             requests.post(url=f"https://api.opendota.com/api/request/{match_id}",timeout=self.req_timeout)
-        except requests.exceptions.Timeout:
+        except requests.exceptions.RequestException:
             pass
 
 if __name__ == '__main__':
