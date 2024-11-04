@@ -91,12 +91,10 @@ def main():
             try:
                 download_match_with_progress_bar(match.replay_url, folder_path)
             except requests.exceptions.RequestException as e:
-                print(e)
                 continue
             with open(os.path.join(folder_path, f"{match.id}.json"), 'w') as out_file:
                 json.dump(full_info, out_file, indent=4)
-        exit()
-        time.sleep(60*60)
+        time.sleep(60*30)
 
 if __name__ == '__main__':
     main()
