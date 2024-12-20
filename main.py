@@ -1,13 +1,11 @@
 import datetime
 import requests
-import shutil
 import queue
 import tqdm
 import json
 import time
 import os
 
-from dota2match import Dota2Match
 from opendota_client import OpendotaClient
 from opendota_client import MatchNotParsedException
 
@@ -58,7 +56,7 @@ def main():
     match_queue = queue.SimpleQueue()
 
     while True:
-        matches = od_client.get_all_matches()
+        matches = od_client.get_high_elo_matches()
 
         print(f"Found {len(matches)} matches on OpenDota")
         total_len = len(matches)
@@ -90,11 +88,14 @@ def main():
                 os.makedirs(folder_path)
             try:
                 download_match_with_progress_bar(match.replay_url, folder_path)
+            except requests.exceptions.HTTPError:
+                continue
             except requests.exceptions.RequestException as e:
+                print(type(e))
                 continue
             with open(os.path.join(folder_path, f"{match.id}.json"), 'w') as out_file:
                 json.dump(full_info, out_file, indent=4)
-        time.sleep(60*30)
+        time.sleep(5)
 
 if __name__ == '__main__':
     main()

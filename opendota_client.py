@@ -42,15 +42,17 @@ class OpendotaClient:
         matches = [Dota2Match(m['match_id'], m['start_time']) for m in response]
         return matches
 
-    def get_high_elo_public_matches(self, min_rank = 60) -> list[Dota2Match]:
-        #min_rank = 60, equals a minimum rank of Ancient https://docs.opendota.com/#tag/public-matches
-        response = self.get_json_request_with_retry(f"https://api.opendota.com/api/publicMatches?min_rank={min_rank}")
+    def get_public_matches(self, min_rank = None, max_rank = None) -> list[Dota2Match]:
+        min_rank = min_rank if min_rank else 0
+        max_rank_param = f"&max_rank={max_rank}" if max_rank else ""
+        response = self.get_json_request_with_retry(f"https://api.opendota.com/api/publicMatches?min_rank={min_rank}{max_rank_param}")
         matches = [Dota2Match(m['match_id'], m['start_time']) for m in response]
         return matches
 
-    def get_all_matches(self) -> list[Dota2Match]:
+    def get_high_elo_matches(self) -> list[Dota2Match]:
         pro_matches = self.get_pro_matches()
-        high_elo_matches = self.get_high_elo_public_matches()
+        #min_rank = 60, equals a minimum rank of Ancient https://docs.opendota.com/#tag/public-matches
+        high_elo_matches = self.get_public_matches(min_rank=60)
         return list(chain(pro_matches, high_elo_matches))
 
     def fill_match_info(self, match:Dota2Match) -> dict:
