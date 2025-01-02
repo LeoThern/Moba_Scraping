@@ -8,6 +8,9 @@ from dota2match import Dota2Match
 class MatchNotParsedException(Exception):
     pass
 
+class DailyRateLimitExhaustedException(Exception):
+    pass
+
 class OpendotaClient:
     def __init__(self, timeout=5, proxies=[]):
         requests.packages.urllib3.util.connection.HAS_IPV6 = False #opendota needs ipv4, times out for ipv6
@@ -27,12 +30,13 @@ class OpendotaClient:
             if int(response.headers["X-Rate-Limit-Remaining-Minute"]) <= 1:
                 current_second = datetime.datetime.now().second
                 remaining_seconds = 60 - current_second
-                time.sleep(remaining_seconds)
+                time.sleep(remaining_seconds + 1)
             if int(response.headers["X-Rate-Limit-Remaining-Day"]) <= 10:
-                print('Daily rate limit exhausted!')
-                exit()
+                raise DailyRateLimitExhaustedException
+            if response.status_code == 500:
+                return self.get_json_request_with_retry(url, counter + 1)
             if response.status_code != 200:
-                #free uses expired?
+                #unknown error
                 print(response, response.text)
                 input()
             return response.json()

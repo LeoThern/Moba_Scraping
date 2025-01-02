@@ -7,9 +7,18 @@ import time
 import os
 
 from opendota_client import OpendotaClient
-from opendota_client import MatchNotParsedException
+from opendota_client import MatchNotParsedException, DailyRateLimitExhaustedException
 
 OUTPUT_FOLDER = './output_folder/'
+
+def seconds_til_daily_ratelimit_reset():
+    """
+    Wait until 1 AM UTC or midnight at UTC+1.
+    """
+    now = time.time()
+    seconds_in_a_day = 24 * 3600
+    seconds_until_1am_utc = ((int(now) // seconds_in_a_day) + 1) * seconds_in_a_day + 3600 - now
+    return seconds_until_1am_utc
 
 def get_local_ids_last_week() -> set:
     def last_seven_days():
@@ -56,7 +65,12 @@ def main():
     match_queue = queue.SimpleQueue()
 
     while True:
-        matches = od_client.get_high_elo_matches()
+        try:
+            matches = od_client.get_high_elo_matches()
+        except DailyRateLimitExhaustedException:
+            print("Sleeping till daily rate limit reset")
+            time.sleep(seconds_til_daily_ratelimit_reset())
+            continue
 
         print(f"Found {len(matches)} matches on OpenDota")
         total_len = len(matches)
@@ -75,6 +89,10 @@ def main():
             except MatchNotParsedException:
                 print(f"OpenDota currently provides no replay_url for {match.id}, parse requested")
                 match_queue.put(match)
+                continue
+            except DailyRateLimitExhaustedException:
+                print("Sleeping till daily rate limit reset")
+                time.sleep(seconds_til_daily_ratelimit_reset())
                 continue
             if match.is_older_than_a_week():
                 print(f"Match {match.id} is older than a week, replay not available anymore")
@@ -96,6 +114,7 @@ def main():
             with open(os.path.join(folder_path, f"{match.id}.json"), 'w') as out_file:
                 json.dump(full_info, out_file, indent=4)
         time.sleep(5)
+    time.sleep(60*60)
 
 if __name__ == '__main__':
     main()
