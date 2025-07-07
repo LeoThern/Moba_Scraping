@@ -2,7 +2,7 @@ import json
 import os
 from dataclasses import dataclass
 
-OUTPUT_FOLDER = './output_folder/'
+OUTPUT_FOLDER = './output_folder/' # output of scraper, i.e. input
 
 @dataclass
 class Match():
